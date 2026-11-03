@@ -67,14 +67,28 @@ function createAuthRouter(database) {
     const email = clean(req.body?.email || req.body?.username);
     const password = req.body?.password;
     if (!email || !password) return bad(res, 'Email and password are required.');
-    const user = await db.get('SELECT * FROM users WHERE LOWER(email) = LOWER(?) AND active = 1 AND deleted = 0', [email]);
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+    const userAgent = req.headers['user-agent'] || '';
+    const locked = await auth.isAccountLocked(db, email);
+    if (locked) {
+      await auth.recordFailedLogin(db, { email, ip, userAgent, reason: 'account_locked' });
+      return bad(res, 'Account is temporarily locked due to multiple failed login attempts. Please try again later.', 423);
+    }
+    const user = await db.get('SELECT * FROM users WHERE LOWER(email) = LOWER(?) AND deleted = 0', [email]);
     if (!user || !auth.verifyPassword(password, user.password_hash)) {
+      await auth.recordFailedLogin(db, { email, ip, userAgent, reason: user ? 'invalid_password' : 'user_not_found' });
       return bad(res, 'Invalid credentials.', 401);
+    }
+    if (!user.active) {
+      await auth.recordFailedLogin(db, { email, ip, userAgent, reason: 'account_inactive' });
+      return bad(res, 'Account is deactivated. Please contact an administrator.', 403);
     }
     await db.run('UPDATE users SET last_login_at = ? WHERE id = ?', [nowIso(), user.id]);
     const permissions = await auth.userPermissions(db, user.id);
     const token = auth.makeToken(user, permissions);
+    await auth.createSession(db, { userId: user.id, token, ip, userAgent, ttlMs: config.sessionTtlMs });
     auth.setSessionCookie(res, token);
+    await auth.recordLogin(db, { userId: user.id, email: user.email, ip, userAgent, success: true });
     await auth.audit(db, user, 'auth.login', 'user', user.id, { email: user.email }, req);
     return res.json({
       token,
@@ -84,6 +98,10 @@ function createAuthRouter(database) {
   }));
 
   router.post('/logout', asyncRoute(async (req, res) => {
+    const token = auth.getToken(req);
+    if (token) {
+      await auth.revokeSession(db, token);
+    }
     auth.clearSessionCookie(res);
     return res.json({ ok: true });
   }));
@@ -114,6 +132,78 @@ function createAuthRouter(database) {
     if (!user || !auth.verifyPassword(current, user.password_hash)) return bad(res, 'Current password is incorrect.', 403);
     await db.run('UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?', [auth.hashPassword(next), nowIso(), user.id]);
     await auth.audit(db, user, 'auth.change_password', 'user', user.id, null, req);
+    return res.json({ ok: true });
+  }));
+
+  router.get('/sessions', asyncRoute(async (req, res) => {
+    const session = await auth.loadUser(db, req);
+    if (!session) return bad(res, 'Authentication required.', 401);
+    const sessions = await auth.getActiveSessions(db, session.user.id);
+    return res.json({ sessions });
+  }));
+
+  router.delete('/sessions/:id', asyncRoute(async (req, res) => {
+    const session = await auth.loadUser(db, req);
+    if (!session) return bad(res, 'Authentication required.', 401);
+    const id = Number(req.params.id);
+    const sessions = await auth.getActiveSessions(db, session.user.id);
+    const target = sessions.find((s) => s.id === id);
+    if (!target) return bad(res, 'Session not found.', 404);
+    await auth.revokeSession(db, target.tokenHash);
+    await auth.audit(db, session.user, 'auth.revoke_session', 'session', id, null, req);
+    return res.json({ ok: true });
+  }));
+
+  router.delete('/sessions', asyncRoute(async (req, res) => {
+    const currentSession = await auth.loadUser(db, req);
+    if (!currentSession) return bad(res, 'Authentication required.', 401);
+    const token = auth.getToken(req);
+    await auth.revokeAllUserSessions(db, currentSession.user.id);
+    if (token) await auth.revokeSession(db, token);
+    auth.clearSessionCookie(res);
+    await auth.audit(db, currentSession.user, 'auth.revoke_all_sessions', 'user', currentSession.user.id, null, req);
+    return res.json({ ok: true });
+  }));
+
+  router.get('/login-history', asyncRoute(async (req, res) => {
+    const session = await auth.loadUser(db, req);
+    if (!session) return bad(res, 'Authentication required.', 401);
+    const canViewAll = session.isSuperAdmin || session.permissions.includes('*') || session.permissions.includes('audit.view');
+    const userId = canViewAll ? (req.query.userId ? Number(req.query.userId) : null) : session.user.id;
+    const limit = Math.min(Number(req.query.limit || 50), 200);
+    const history = await auth.getLoginHistory(db, { userId, limit });
+    return res.json({ history });
+  }));
+
+  router.post('/forgot-password', asyncRoute(async (req, res) => {
+    const email = clean(req.body?.email);
+    if (!email) return bad(res, 'Email is required.');
+    const user = await db.get('SELECT * FROM users WHERE LOWER(email) = LOWER(?) AND deleted = 0', [email]);
+    if (!user) return res.json({ ok: true, message: 'If the email exists, a reset link has been sent.' });
+    const resetToken = auth.generateResetToken();
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+    await db.run(
+      `INSERT INTO sync_state (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value`,
+      [`password_reset_${user.id}`, JSON.stringify({ token: resetToken, expiresAt })],
+    );
+    await auth.audit(db, null, 'auth.forgot_password', 'user', user.id, { email }, req);
+    return res.json({ ok: true, message: 'If the email exists, a reset link has been sent.', resetToken });
+  }));
+
+  router.post('/reset-password', asyncRoute(async (req, res) => {
+    const { token, newPassword } = req.body || {};
+    if (!token || !newPassword || String(newPassword).length < 8) return bad(res, 'Reset token and new password (min 8 chars) are required.');
+    const row = await db.get("SELECT value FROM sync_state WHERE key LIKE 'password_reset_%'", []);
+    if (!row) return bad(res, 'Invalid or expired reset token.', 400);
+    const data = JSON.parse(row.value);
+    if (data.token !== token || new Date(data.expiresAt) < new Date()) return bad(res, 'Invalid or expired reset token.', 400);
+    const userId = Number(row.key.replace('password_reset_', ''));
+    const user = await db.get('SELECT * FROM users WHERE id = ? AND deleted = 0', [userId]);
+    if (!user) return bad(res, 'User not found.', 404);
+    await db.run('UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?', [auth.hashPassword(newPassword), nowIso(), userId]);
+    await db.run("DELETE FROM sync_state WHERE key = ?", [row.key]);
+    await auth.revokeAllUserSessions(db, userId);
+    await auth.audit(db, user, 'auth.reset_password', 'user', userId, null, req);
     return res.json({ ok: true });
   }));
 

@@ -185,6 +185,8 @@ async function initDb() {
       'ALTER TABLE settings ADD COLUMN timezone TEXT',
       'ALTER TABLE settings ADD COLUMN deduct_stock_on_submit INTEGER DEFAULT 1',
       'ALTER TABLE settings ADD COLUMN low_stock_alerts INTEGER DEFAULT 1',
+      'ALTER TABLE settings ADD COLUMN restaurant_code TEXT',
+      'ALTER TABLE role_permissions ADD COLUMN environment TEXT DEFAULT \'both\'',
       'ALTER TABLE menu_items ADD COLUMN sku TEXT',
       'ALTER TABLE menu_items ADD COLUMN cost_price REAL DEFAULT 0',
       'ALTER TABLE menu_items ADD COLUMN taxable INTEGER DEFAULT 1',

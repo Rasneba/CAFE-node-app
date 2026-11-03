@@ -9,7 +9,7 @@ const { seedErpData } = require('./seed-erp');
 const { createReportService } = require('./reports/reportService');
 const { createReportsRouter } = require('./reports/routes');
 const { createAuthRouter } = require('./erp');
-const { authMiddleware, requireAuth } = require('./auth');
+const { authMiddleware, requireAuth, requirePermission, requireAnyPermission } = require('./auth');
 const { rateLimit } = require('./rateLimit');
 
 const asyncRoute = (handler) => (req, res, next) => Promise.resolve(handler(req, res, next)).catch(next);
@@ -32,27 +32,7 @@ function requireDevice(req, res, next) {
 }
 
 function requireAdmin(req, res, next) {
-  if (req.user && (req.isSuperAdmin || req.permissions.includes('*') || req.permissions.includes('settings.manage'))) {
-    return next();
-  }
-  if (!config.adminPassword) {
-    return res.status(503).json({ error: { message: 'ADMIN_PASSWORD is not configured on the server.' } });
-  }
-  const header = req.headers.authorization || '';
-  const [scheme, encoded] = header.split(' ');
-  if (scheme !== 'Basic' || !encoded) {
-    res.set('WWW-Authenticate', 'Basic realm="Restaurant Admin"');
-    return res.status(401).json({ error: { message: 'Authentication required.' } });
-  }
-  const decoded = Buffer.from(encoded, 'base64').toString('utf8');
-  const separator = decoded.indexOf(':');
-  const username = separator === -1 ? decoded : decoded.slice(0, separator);
-  const password = separator === -1 ? '' : decoded.slice(separator + 1);
-  if (!safeEqual(username, config.adminUsername) || !safeEqual(password, config.adminPassword)) {
-    res.set('WWW-Authenticate', 'Basic realm="Restaurant Admin"');
-    return res.status(401).json({ error: { message: 'Invalid credentials.' } });
-  }
-  return next();
+  return requirePermission('settings.manage')(req, res, next);
 }
 
 function mapItem(row) {
@@ -489,6 +469,7 @@ function createCloudApp(db) {
         restaurantName: settings.restaurant_name,
         currency: settings.currency,
         receiptFooter: settings.receipt_footer,
+        restaurantCode: settings.restaurant_code,
       },
       table: table ? { number: table.number, name: table.name } : null,
       categories: categories.map((row) => ({ id: row.id, name: row.name })),
@@ -921,8 +902,10 @@ function createCloudApp(db) {
   }));
 
   const qrHandler = asyncRoute(async (req, res) => {
+    const settings = await db.get('SELECT * FROM settings WHERE id = 1');
+    const code = settings.restaurant_code || config.deviceId;
     const origin = config.publicUrl || `${req.protocol}://${req.get('host')}`;
-    const text = String(req.query.text || `${origin}/menu`);
+    const text = String(req.query.text || `${origin}/menu/${code}`);
     const buffer = await QRCode.toBuffer(text, { width: 560, margin: 1, color: { dark: '#1f2a20', light: '#ffffff' } });
     res.type('png').send(buffer);
   });
@@ -932,6 +915,7 @@ function createCloudApp(db) {
   app.use('/api/reports', requireAdmin, createReportsRouter(reportService, { timeZone: config.timeZone }));
 
   app.get('/menu', (req, res) => res.sendFile(path.join(config.root, 'public', 'menu.html')));
+  app.get('/menu/:code', (req, res) => res.sendFile(path.join(config.root, 'public', 'menu.html')));
   app.get('/admin', requireAdmin, (req, res) => res.sendFile(path.join(config.root, 'public', 'admin.html')));
   app.get('/pos', requireAuth({ redirect: true }), (req, res) => res.redirect('/erp#orders'));
   app.get('/kitchen', requireAuth({ redirect: true }), (req, res) => res.sendFile(path.join(config.root, 'public', 'kds.html')));

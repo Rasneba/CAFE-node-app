@@ -516,6 +516,7 @@ function buildLocalApp(db) {
         serviceChargeEnabled: Boolean(settings.service_charge_enabled),
         taxEnabled: Boolean(settings.tax_enabled),
         receiptFooter: settings.receipt_footer,
+        restaurantCode: settings.restaurant_code,
       },
       categories: categories.map((row) => ({ id: row.id, uuid: row.sync_id, name: row.name, sort: row.sort })),
       items: items.map(mapItem),
@@ -736,6 +737,7 @@ function buildLocalApp(db) {
         serviceChargeEnabled: Boolean(settings.service_charge_enabled),
         taxEnabled: Boolean(settings.tax_enabled),
         receiptFooter: settings.receipt_footer,
+        restaurantCode: settings.restaurant_code,
       },
     });
   }));
@@ -818,7 +820,9 @@ function buildLocalApp(db) {
   }));
 
   const qrHandler = asyncRoute(async (req, res) => {
-    const text = String(req.query.text || `${config.publicUrl || `http://localhost:${config.port}`}/menu`);
+    const settings = await getSettingsRow(db);
+    const code = settings.restaurant_code || config.deviceId;
+    const text = String(req.query.text || `${config.publicUrl || `http://localhost:${config.port}`}/menu/${code}`);
     const buffer = await QRCode.toBuffer(text, { width: 512, margin: 1, color: { dark: '#1f2a20', light: '#ffffff' } });
     res.type('png').send(buffer);
   });
@@ -826,9 +830,9 @@ function buildLocalApp(db) {
   app.get('/api/admin/qr', qrHandler);
 
   app.get('/api/public/menu', asyncRoute(async (req, res) => {
+    const settings = await getSettingsRow(db);
     const token = req.query.t ? String(req.query.t) : null;
     const table = token ? await db.get('SELECT * FROM dining_tables WHERE qr_token = ? AND deleted = 0', [token]) : null;
-    const settings = await getSettingsRow(db);
     const categories = await db.all('SELECT * FROM menu_categories WHERE deleted = 0 AND active = 1 ORDER BY sort, id');
     const items = await db.all(
       `SELECT i.*, c.name AS category_name
@@ -841,6 +845,7 @@ function buildLocalApp(db) {
         restaurantName: settings.restaurant_name,
         currency: settings.currency,
         receiptFooter: settings.receipt_footer,
+        restaurantCode: settings.restaurant_code,
       },
       table: table ? { number: table.number, name: table.name } : null,
       categories: categories.map((row) => ({ id: row.id, name: row.name })),
@@ -857,6 +862,7 @@ function buildLocalApp(db) {
   }));
 
   app.get('/menu', (req, res) => res.sendFile(path.join(config.root, 'public', 'menu.html')));
+  app.get('/menu/:code', (req, res) => res.sendFile(path.join(config.root, 'public', 'menu.html')));
 
   app.get('/admin', (req, res) => res.sendFile(path.join(config.root, 'public', 'index.html')));
 

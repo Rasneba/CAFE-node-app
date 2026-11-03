@@ -87,13 +87,17 @@ function basicCredentials(req) {
 }
 
 async function loadUser(db, req) {
+  const env = config.isCloud ? 'cloud' : 'local';
   const token = getToken(req);
   if (token) {
     const payload = verifyToken(token);
     if (payload && payload.sub != null) {
+      const revoked = await isSessionRevoked(db, token);
+      if (revoked) return null;
       const user = await db.get('SELECT * FROM users WHERE id = ? AND deleted = 0', [Number(payload.sub)]);
       if (user) {
-        user.permissions = await userPermissions(db, user.id);
+        if (!user.active) return null;
+        user.permissions = await userPermissions(db, user.id, env);
         return { user, permissions: user.permissions, isSuperAdmin: Boolean(user.is_super_admin), token };
       }
     }
@@ -101,11 +105,26 @@ async function loadUser(db, req) {
 
   const basic = basicCredentials(req);
   if (basic) {
-    const user = await db.get('SELECT * FROM users WHERE email = ? AND deleted = 0', [basic.username]);
+    const locked = await isAccountLocked(db, basic.username);
+    if (locked) {
+      return null;
+    }
+    const user = await db.get('SELECT * FROM users WHERE LOWER(email) = LOWER(?) AND deleted = 0', [basic.username]);
+    if (!user) {
+      await recordFailedLogin(db, { email: basic.username, ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress || '', userAgent: req.headers['user-agent'] || '', reason: 'user_not_found' });
+      return null;
+    }
+    if (!user.active) {
+      await recordFailedLogin(db, { email: basic.username, ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress || '', userAgent: req.headers['user-agent'] || '', reason: 'account_inactive' });
+      return null;
+    }
     if (user && verifyPassword(basic.password, user.password_hash)) {
-      user.permissions = await userPermissions(db, user.id);
+      await recordLogin(db, { userId: user.id, email: user.email, ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress || '', userAgent: req.headers['user-agent'] || '', success: true });
+      await db.run('UPDATE users SET last_login_at = ? WHERE id = ?', [new Date().toISOString(), user.id]);
+      user.permissions = await userPermissions(db, user.id, env);
       return { user, permissions: user.permissions, isSuperAdmin: Boolean(user.is_super_admin), token: makeToken(user, user.permissions) };
     }
+    await recordFailedLogin(db, { email: basic.username, ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress || '', userAgent: req.headers['user-agent'] || '', reason: 'invalid_password' });
     if (config.adminUsername && config.adminPassword && basic.username === config.adminUsername && basic.password === config.adminPassword) {
       return {
         user: { id: 0, name: 'Admin', email: config.adminUsername, is_super_admin: 1, active: 1 },
@@ -119,15 +138,17 @@ async function loadUser(db, req) {
   return null;
 }
 
-async function userPermissions(db, userId) {
+async function userPermissions(db, userId, environment = 'both') {
+  const envCondition = environment === 'both' ? '' : "AND (rp.environment = ? OR rp.environment = 'both')";
+  const params = environment === 'both' ? [userId] : [userId, environment];
   const rows = await db.all(
     `SELECT p.code
      FROM user_roles ur
      JOIN roles r ON r.id = ur.role_id AND r.is_system = 1
      JOIN role_permissions rp ON rp.role_id = r.id
      JOIN permissions p ON p.code = rp.permission_code
-     WHERE ur.user_id = ?`,
-    [userId],
+     WHERE ur.user_id = ? ${envCondition}`,
+    params,
   );
   return rows.map((row) => row.code);
 }
@@ -205,6 +226,120 @@ async function audit(db, user, action, entity, entityId, details, req) {
   );
 }
 
+async function recordLogin(db, { userId, email, ip, userAgent, success, failureReason = null }) {
+  await db.run(
+    `INSERT INTO login_history (user_id, email, ip, user_agent, success, failure_reason, created_at, deleted)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 0)`,
+    [userId || null, email || null, ip || null, userAgent || null, success ? 1 : 0, failureReason || null, new Date().toISOString()],
+  );
+}
+
+async function recordFailedLogin(db, { email, ip, userAgent, reason }) {
+  await recordLogin(db, { userId: null, email, ip, userAgent, success: false, failureReason: reason });
+  const since = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+  const row = await db.get(
+    `SELECT COUNT(*) AS count FROM login_history
+     WHERE email = ? AND success = 0 AND deleted = 0 AND created_at >= ?`,
+    [email, since],
+  );
+  return Number(row ? row.count : 0);
+}
+
+async function isAccountLocked(db, email, maxAttempts = 5) {
+  const since = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+  const row = await db.get(
+    `SELECT COUNT(*) AS count FROM login_history
+     WHERE email = ? AND success = 0 AND deleted = 0 AND created_at >= ?`,
+    [email, since],
+  );
+  return Number(row ? row.count : 0) >= maxAttempts;
+}
+
+async function getLoginHistory(db, { userId, limit = 50, offset = 0 }) {
+  const params = [];
+  let where = 'WHERE deleted = 0';
+  if (userId != null) {
+    where += ' AND user_id = ?';
+    params.push(userId);
+  }
+  const rows = await db.all(
+    `SELECT id, user_id, email, ip, user_agent, success, failure_reason, created_at
+     FROM login_history ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+    [...params, limit, offset],
+  );
+  return rows.map((row) => ({
+    id: row.id,
+    userId: row.user_id,
+    email: row.email,
+    ip: row.ip,
+    userAgent: row.user_agent,
+    success: Boolean(row.success),
+    failureReason: row.failure_reason,
+    createdAt: row.created_at,
+  }));
+}
+
+async function hashToken(token) {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
+
+async function createSession(db, { userId, token, ip, userAgent, ttlMs }) {
+  const tokenHash = await hashToken(token);
+  const expiresAt = new Date(Date.now() + ttlMs).toISOString();
+  await db.run(
+    `INSERT INTO user_sessions (user_id, token_hash, expires_at, ip, user_agent, created_at, deleted)
+     VALUES (?, ?, ?, ?, ?, ?, 0)`,
+    [userId, tokenHash, expiresAt, ip || null, userAgent || null, new Date().toISOString()],
+  );
+}
+
+async function revokeSession(db, token) {
+  const tokenHash = await hashToken(token);
+  await db.run(
+    `UPDATE user_sessions SET revoked_at = ? WHERE token_hash = ? AND revoked_at IS NULL AND deleted = 0`,
+    [new Date().toISOString(), tokenHash],
+  );
+}
+
+async function revokeAllUserSessions(db, userId) {
+  await db.run(
+    `UPDATE user_sessions SET revoked_at = ? WHERE user_id = ? AND revoked_at IS NULL AND deleted = 0`,
+    [new Date().toISOString(), userId],
+  );
+}
+
+async function isSessionRevoked(db, token) {
+  const tokenHash = await hashToken(token);
+  const row = await db.get(
+    `SELECT revoked_at FROM user_sessions WHERE token_hash = ? AND deleted = 0 ORDER BY created_at DESC LIMIT 1`,
+    [tokenHash],
+  );
+  return Boolean(row && row.revoked_at);
+}
+
+async function getActiveSessions(db, userId) {
+  const now = new Date().toISOString();
+  const rows = await db.all(
+    `SELECT id, token_hash, expires_at, ip, user_agent, created_at
+     FROM user_sessions
+     WHERE user_id = ? AND revoked_at IS NULL AND deleted = 0 AND expires_at > ?
+     ORDER BY created_at DESC`,
+    [userId, now],
+  );
+  return rows.map((row) => ({
+    id: row.id,
+    tokenHash: row.token_hash,
+    expiresAt: row.expires_at,
+    ip: row.ip,
+    userAgent: row.user_agent,
+    createdAt: row.created_at,
+  }));
+}
+
+function generateResetToken() {
+  return crypto.randomBytes(32).toString('hex');
+}
+
 module.exports = {
   SESSION_COOKIE,
   hashPassword,
@@ -221,4 +356,14 @@ module.exports = {
   requirePermission,
   requireAnyPermission,
   audit,
+  recordLogin,
+  recordFailedLogin,
+  isAccountLocked,
+  getLoginHistory,
+  createSession,
+  revokeSession,
+  revokeAllUserSessions,
+  isSessionRevoked,
+  getActiveSessions,
+  generateResetToken,
 };

@@ -1,7 +1,21 @@
 (() => {
-  const view = document.getElementById('adminView');
+  const view = document.getElementById('view');
   const toastEl = document.getElementById('adminToast');
-  const state = { tab: 'dashboard', menu: { categories: [], items: [] }, selectedCategory: 'All items', editingId: null, summary: null, orders: [], settings: null, qrText: '' };
+  const navGroups = document.getElementById('navGroups');
+  const crumbLabel = document.getElementById('crumbLabel');
+  const menuToggle = document.getElementById('menuToggle');
+  const sidebar = document.getElementById('sidebar');
+  const mobileScrim = document.getElementById('mobileScrim');
+  const state = { tab: 'dashboard', menu: { categories: [], items: [] }, selectedCategory: 'All items', editingId: null, summary: null, orders: [], settings: null, qrText: '', me: null, permissions: [] };
+
+  const NAV_ITEMS = [
+    { id: 'dashboard', label: 'Overview', abbr: 'OV', icon: 'layout-dashboard', group: 'Operations' },
+    { id: 'menu', label: 'Digital Menu', abbr: 'MN', icon: 'book-open', group: 'Operations' },
+    { id: 'orders', label: 'Orders', abbr: 'OR', icon: 'shopping-cart', group: 'Operations' },
+    { id: 'reports', label: 'Reports', abbr: 'RP', icon: 'bar-chart-3', group: 'Operations' },
+    { id: 'sync', label: 'Sync & QR', abbr: 'SY', icon: 'refresh-cw', group: 'Administration' },
+    { id: 'settings', label: 'Settings', abbr: 'SE', icon: 'settings', group: 'Administration' },
+  ];
 
   function icon(name) {
     return `<i data-lucide="${name}"></i>`;
@@ -30,11 +44,22 @@
     if (window.lucide) window.lucide.createIcons();
   }
 
-  async function api(path, options = {}) {
-    const response = await fetch(path, { headers: { 'content-type': 'application/json' }, ...options });
-    const body = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(body?.error?.message || `Request failed (${response.status})`);
-    return body;
+  function can(permission) {
+    if (!permission) return true;
+    if (state.me && state.me.isSuperAdmin) return true;
+    return state.permissions.indexOf('*') !== -1 || state.permissions.indexOf(permission) !== -1;
+  }
+
+  function api(path, options = {}) {
+    const token = document.cookie.match(/(?:^|;\s*)erp_session=([^;]+)/);
+    const headers = { 'content-type': 'application/json' };
+    if (token) headers.Authorization = `Bearer ${token[1]}`;
+    return fetch(path, { headers, ...options })
+      .then((response) => response.json().catch(() => ({})))
+      .then((body) => {
+        if (!response.ok) throw new Error(body?.error?.message || `Request failed (${response.status})`);
+        return body;
+      });
   }
 
   function pillClass(status) {
@@ -54,20 +79,84 @@
     return Number.isNaN(date.getTime()) ? esc(value) : date.toLocaleString();
   }
 
-  function setTab(tab) {
-    state.tab = tab;
-    document.querySelectorAll('#adminTabs [data-tab]').forEach((button) => button.classList.toggle('active', button.dataset.tab === tab));
-    render();
+  function renderNav() {
+    const groups = {};
+    NAV_ITEMS.forEach(function (item) {
+      groups[item.group] = groups[item.group] || [];
+      groups[item.group].push(item);
+    });
+    navGroups.innerHTML = Object.keys(groups).map(function (group) {
+      return '<div class="nav-caption">' + esc(group) + '</div>' + groups[group].map(function (item) {
+        const active = state.tab === item.id ? ' active' : '';
+        return '<a class="nav-item' + active + '" href="#' + item.id + '" data-view="' + item.id + '"><span class="nav-abbr">' + item.abbr + '</span><span>' + esc(item.label) + '</span></a>';
+      }).join('');
+    }).join('');
+    drawIcons();
   }
 
-  async function render() {
-    if (state.tab === 'dashboard') return renderDashboard();
-    if (state.tab === 'menu') return renderMenu();
-    if (state.tab === 'orders') return renderOrders();
-    if (state.tab === 'reports') return renderReports();
-    if (state.tab === 'sync') return renderSync();
-    if (state.tab === 'settings') return renderSettings();
-    return renderDashboard();
+  function renderProfile() {
+    const user = state.me || {};
+    const avatarEl = document.querySelector('.profile-avatar');
+    if (avatarEl) avatarEl.textContent = (user.name || 'CA').split(' ').map((n) => n[0]).join('').toUpperCase() || 'CA';
+    const nameEl = document.querySelector('.sidebar-bottom b');
+    if (nameEl) nameEl.textContent = user.name || 'Cloud Admin';
+  }
+
+  function closeSidebar() {
+    sidebar.classList.remove('open');
+    mobileScrim.classList.remove('open');
+  }
+
+  async function loadView(name) {
+    if (!can() && name !== 'dashboard') name = 'dashboard';
+    state.tab = name;
+    crumbLabel.textContent = NAV_ITEMS.find((i) => i.id === name)?.label || 'Dashboard';
+    renderNav();
+    closeSidebar();
+    view.innerHTML = '<div class="empty">Loading…</div>';
+    try {
+      if (name === 'dashboard') return renderDashboard();
+      if (name === 'menu') return renderMenu();
+      if (name === 'orders') return renderOrders();
+      if (name === 'reports') return renderReports();
+      if (name === 'sync') return renderSync();
+      if (name === 'settings') return renderSettings();
+      return renderDashboard();
+    } catch (error) {
+      view.innerHTML = '<div class="admin-card"><h2>Error</h2><p class="sub">' + esc(error.message) + '</p></div>';
+    }
+  }
+
+  async function init() {
+    try {
+      const me = await api('/api/auth/me');
+      state.me = me.user;
+      state.permissions = me.permissions || [];
+      renderProfile();
+    } catch {
+      window.location.replace('/login?next=/admin');
+      return;
+    }
+    renderNav();
+    const hash = window.location.hash.replace('#', '') || 'dashboard';
+    loadView(hash);
+    menuToggle.addEventListener('click', function () {
+      sidebar.classList.toggle('open');
+      mobileScrim.classList.toggle('open');
+    });
+    mobileScrim.addEventListener('click', closeSidebar);
+    navGroups.addEventListener('click', function (event) {
+      const link = event.target.closest('[data-view]');
+      if (link) {
+        event.preventDefault();
+        closeSidebar();
+        loadView(link.getAttribute('data-view'));
+      }
+    });
+    window.addEventListener('hashchange', function () {
+      const hash = window.location.hash.replace('#', '') || 'dashboard';
+      if (hash !== state.tab) loadView(hash);
+    });
   }
 
   async function renderDashboard() {
@@ -76,7 +165,7 @@
       const [summary, orders] = await Promise.all([api('/api/admin/summary'), api('/api/admin/orders?limit=8')]);
       state.summary = summary;
       state.orders = orders.orders;
-      view.innerHTML = `<div class="stat-row"><div class="stat-box"><span>PAID SALES</span><b>${money(summary.sales)}</b><small>${summary.paidOrders} paid orders</small></div><div class="stat-box"><span>TOTAL ORDERS</span><b>${summary.orders}</b><small>${summary.lastOrderAt ? `Last ${timeOf(summary.lastOrderAt)}` : 'No orders yet'}</small></div><div class="stat-box"><span>MENU ITEMS</span><b>${summary.menuItems}</b><small>Live on the public menu</small></div><div class="stat-box"><span>TABLES</span><b>${summary.tables}</b><small>QR menu tokens</small></div></div>
+      view.innerHTML = `<div class="admin-card"><div class="stat-row"><div class="stat-box"><span>PAID SALES</span><b>${money(summary.sales)}</b><small>${summary.paidOrders} paid orders</small></div><div class="stat-box"><span>TOTAL ORDERS</span><b>${summary.orders}</b><small>${summary.lastOrderAt ? `Last ${timeOf(summary.lastOrderAt)}` : 'No orders yet'}</small></div><div class="stat-box"><span>MENU ITEMS</span><b>${summary.menuItems}</b><small>Live on the public menu</small></div><div class="stat-box"><span>TABLES</span><b>${summary.tables}</b><small>QR menu tokens</small></div></div>
         <div class="admin-card"><h2>Recent synced orders</h2><p class="sub">Orders pushed from the restaurant device every three minutes.</p><div class="table-wrap"><table class="data-table"><thead><tr><th>ORDER</th><th>TABLE</th><th>ITEMS</th><th>TOTAL</th><th>STATUS</th><th>DEVICE</th><th>CREATED</th></tr></thead><tbody>${orders.orders.map((order) => `<tr><td><b>${esc(order.orderNumber)}</b></td><td>${order.tableNumber ? esc(order.tableNumber) : statusLabel(order.type)}</td><td>${order.items.length}</td><td>${money(order.total)}</td><td><span class="pill ${pillClass(order.status)}">${statusLabel(order.status)}</span></td><td>${esc(order.deviceId || '—')}</td><td>${timeOf(order.createdAt)}</td></tr>`).join('') || '<tr><td colspan="7"><div class="empty">No orders synced yet.</div></td></tr>'}</tbody></table></div></div>`;
       drawIcons();
     } catch (error) {
@@ -146,7 +235,7 @@
     try {
       const body = await api('/api/admin/settings');
       state.settings = body.settings;
-      view.innerHTML = `<div class="admin-grid"><div class="admin-card"><h2>Restaurant settings</h2><p class="sub">These values flow to the local device on the next sync.</p><div class="field"><label>Restaurant name</label><input id="setName" value="${esc(body.settings.restaurantName)}"></div><div class="field"><label>Currency</label><input id="setCurrency" value="${esc(body.settings.currency)}"></div><div class="field"><label>Tax rate · %</label><input id="setTax" type="number" value="${body.settings.taxRate}"></div><div class="field"><label>Service charge · %</label><input id="setService" type="number" value="${body.settings.serviceChargeRate}"></div><div class="field"><label>Receipt footer</label><textarea id="setFooter">${esc(body.settings.receiptFooter || '')}</textarea></div><div class="admin-actions"><button class="btn btn-primary" onclick="adminSaveSettings()">${icon('check')} Save settings</button></div></div><div class="admin-card"><h2>Security</h2><p class="sub">Admin pages use HTTP Basic auth.</p><p style="font-size:11px;line-height:1.7;color:#777c72">Set <code>ADMIN_USERNAME</code> and <code>ADMIN_PASSWORD</code> in Vercel. Set <code>DEVICE_API_KEY</code> to the same value on the local device so it can push orders.</p></div></div>`;
+      view.innerHTML = `<div class="admin-grid"><div class="admin-card"><h2>Restaurant settings</h2><p class="sub">These values flow to the local device on the next sync.</p><div class="field"><label>Restaurant name</label><input id="setName" value="${esc(body.settings.restaurantName)}"></div><div class="field"><label>Currency</label><input id="setCurrency" value="${esc(body.settings.currency)}"></div><div class="field"><label>Tax rate · %</label><input id="setTax" type="number" value="${body.settings.taxRate}"></div><div class="field"><label>Service charge · %</label><input id="setService" type="number" value="${body.settings.serviceChargeRate}"></div><div class="field"><label>Receipt footer</label><textarea id="setFooter">${esc(body.settings.receiptFooter || '')}</textarea></div><div class="admin-actions"><button class="btn btn-primary" onclick="adminSaveSettings()">${icon('check')} Save settings</button></div></div><div class="admin-card"><h2>Security</h2><p class="sub">Admin pages use JWT session auth. Set <code>ADMIN_USERNAME</code> and <code>ADMIN_PASSWORD</code> in Vercel. Set <code>DEVICE_API_KEY</code> to the same value on the local device so it can push orders.</p></div></div>`;
       drawIcons();
     } catch (error) {
       view.innerHTML = `<div class="admin-card"><h2>Could not load settings</h2><p class="sub">${esc(error.message)}</p></div>`;
@@ -201,16 +290,12 @@
     }
   }
 
-  async function adminAddCategory() {
+  function adminAddCategory() {
     const name = prompt('New category name:');
     if (!name) return;
-    try {
-      await api('/api/admin/menu/categories', { method: 'POST', body: JSON.stringify({ name }) });
-      toast('Category added');
-      await renderMenu();
-    } catch (error) {
-      toast(error.message);
-    }
+    api('/api/admin/menu/categories', { method: 'POST', body: JSON.stringify({ name }) })
+      .then(() => { toast('Category added'); renderMenu(); })
+      .catch((error) => toast(error.message));
   }
 
   function adminRefreshQr() {
@@ -247,11 +332,21 @@
   window.adminRefreshQr = adminRefreshQr;
   window.adminSaveSettings = adminSaveSettings;
 
-  document.getElementById('adminTabs').addEventListener('click', (event) => {
-    const button = event.target.closest('[data-tab]');
-    if (button) setTab(button.dataset.tab);
-  });
-
   api('/api/admin/settings').then((body) => { state.settings = body.settings; }).catch(() => {});
-  render();
+  init();
+
+  document.addEventListener('click', (event) => {
+    if (event.target.id === 'modalLayer') {
+      const layer = document.getElementById('modalLayer');
+      layer.classList.remove('open');
+      layer.innerHTML = '';
+    }
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      const layer = document.getElementById('modalLayer');
+      layer.classList.remove('open');
+      layer.innerHTML = '';
+    }
+  });
 })();
