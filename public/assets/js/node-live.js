@@ -57,6 +57,7 @@
 
   async function api(path, options = {}) {
     const response = await fetch(path, {
+      credentials: 'same-origin',
       headers: { 'content-type': 'application/json' },
       ...options,
     });
