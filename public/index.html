@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f7f7f4">
+  <title>Maison — Restaurant Operations</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/premium.css">
+  <link rel="stylesheet" href="/assets/css/reports.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+  <div class="prototype-note"><span class="note-dot"></span><span>LIVE NODE.JS OPERATIONS</span><span class="note-divider"></span>Orders, kitchen, printing and reports are connected to the local database</div>
+  <div class="app-shell" id="appShell">
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="#dashboard" aria-label="Maison home"><span class="brand-mark"><i data-lucide="utensils"></i></span><span><strong>Maison</strong><small>RESTAURANT OS</small></span></a>
+      <div class="venue-switch"><span class="venue-icon"><i data-lucide="store"></i></span><span><b>Maison Addis</b><small>Bole · Main venue</small></span><i data-lucide="chevrons-up-down" class="switch-icon"></i></div>
+      <nav class="nav-groups" id="navGroups"></nav>
+      <div class="sidebar-bottom"><div class="service-card"><span class="service-live"></span><span><b>Service is smooth</b><small>All stations looking good</small></span><i data-lucide="arrow-up-right"></i></div><div class="profile-row"><span class="profile-avatar">AM</span><span><b>Abebe Mekonnen</b><small>Restaurant manager</small></span><button class="icon-button quiet" aria-label="Profile menu"><i data-lucide="more-horizontal"></i></button></div></div>
+    </aside>
+    <div class="mobile-scrim" id="mobileScrim"></div>
+    <main class="main-shell">
+      <header class="topbar"><button class="icon-button menu-toggle" id="menuToggle" aria-label="Open navigation"><i data-lucide="menu"></i></button><div class="crumb"><span>Maison Addis</span><i data-lucide="chevron-right"></i><b id="crumbLabel">Overview</b></div><div class="topbar-actions"><div class="service-pill"><span class="service-live"></span> Lunch service</div><button class="icon-button notification-button" aria-label="Notifications"><i data-lucide="bell"></i><span></span></button><span class="top-divider"></span><button class="profile-compact"><span class="profile-avatar">AM</span><span><b>Abebe M.</b><small>Manager</small></span><i data-lucide="chevron-down"></i></button></div></header>
+      <div id="view" class="view"></div>
+    </main>
+  </div>
+  <div class="toast" id="toast"><i data-lucide="sparkles"></i><span>Preview interaction only</span></div>
+  <div class="modal-layer" id="modalLayer" aria-hidden="true"></div>
+  <script src="/assets/js/reports.js"></script>
+  <script src="/assets/js/premium-preview.js"></script>
+  <script src="/assets/js/node-live.js"></script>
+</body>
+</html>

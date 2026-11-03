@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f7f7f4">
+  <title>Reports | Maison</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/premium.css">
+  <link rel="stylesheet" href="/assets/css/reports.css">
+  <style>
+    body { background: #f7f7f4; }
+    .reports-shell { max-width: 1280px; margin: 0 auto; padding: 22px 18px 50px; }
+    .reports-back { display: flex; justify-content: flex-end; margin-bottom: 10px; }
+    .reports-back a { color: #264f3d; font-size: 12px; font-weight: 700; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <main class="reports-shell">
+    <div class="reports-back"><a href="/erp">Back to ERP</a></div>
+    <div id="reportsRoot"><div class="report-loading"><div><div class="report-loading-spinner"></div><b>Loading report</b><p>Preparing restaurant sales data...</p></div></div></div>
+  </main>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="/assets/js/reports.js"></script>
+  <script>
+    document.getElementById('reportsRoot').innerHTML = window.RestaurantReports.render();
+    if (window.lucide) window.lucide.createIcons();
+  </script>
+</body>
+</html>

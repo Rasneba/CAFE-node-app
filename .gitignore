@@ -1,0 +1,13 @@
+node_modules/
+.env
+.env.*
+!.env.example
+data/
+logs/
+_storage/
+.vercel/
+*.log
+*.db
+
+.vercel
+.env*

@@ -1,0 +1,26 @@
+{
+  "mode": "local",
+  "port": 4100,
+  "databaseUrl": "postgresql://postgres@127.0.0.1:5432/restaurant_local",
+  "sqliteFile": "data/local.db",
+  "deviceId": "restaurant-main",
+  "deviceApiKey": "change-this-device-key",
+  "cloudUrl": "https://restaurantmangement-ephrem-awulachews-projects.vercel.app",
+  "syncIntervalMs": 180000,
+  "printer": {
+    "name": "Kitchen pass",
+    "ip": "192.168.1.50",
+    "port": 9100,
+    "paperWidth": 80,
+    "encoding": "ascii",
+    "dryRun": true
+  },
+  "restaurantName": "Maison Addis",
+  "currency": "ETB",
+  "taxRate": 15,
+  "serviceChargeRate": 10,
+  "timeZone": "Africa/Addis_Ababa",
+  "publicUrl": "http://localhost:4100",
+  "adminUsername": "manager",
+  "adminPassword": "change-this-admin-password"
+}

@@ -1,0 +1,27 @@
+{
+  "name": "restaurant-node-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Offline-first restaurant POS + kitchen + printing with 3-minute Neon/Vercel sync and a public QR menu.",
+  "main": "src/local.js",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=22.5"
+  },
+  "scripts": {
+    "dev": "node --watch src/local.js",
+    "start": "node src/local.js",
+    "cloud": "node src/cloud.js",
+    "migrate": "node scripts/migrate.js",
+    "seed": "node scripts/seed.js",
+    "setup": "npm run migrate && npm run seed",
+    "test": "node --test test/*.test.js",
+    "check": "node --check src/local.js && node --check src/cloud.js && node --check src/db.js && node --check src/printer.js && node --check src/sync.js && node --check src/auth.js && node --check src/license.js && node --check src/inventory.js && node --check src/erp.js && node --check src/seed-erp.js && node --check api/index.js && node --check scripts/migrate.js && node --check scripts/seed.js && node --check public/assets/js/node-live.js && node --check public/assets/js/admin.js && node --check public/assets/js/public-menu.js && node --check public/assets/js/reports.js && node --check public/assets/js/login.js && node --check public/assets/js/license.js && node --check public/assets/js/erp.js && node --check public/assets/js/kds-node.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "pg": "^8.13.1",
+    "qrcode": "^1.5.4"
+  }
+}

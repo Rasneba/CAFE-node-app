@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f7f7f4">
+  <title>Maison · Cloud Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/premium.css">
+  <link rel="stylesheet" href="/assets/css/reports.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <style>
+    body { background: #f7f7f4; }
+    .admin-shell { max-width: 1240px; margin: 0 auto; padding: 26px 24px 60px; }
+    .admin-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+    .admin-brand { display: flex; align-items: center; gap: 11px; }
+    .admin-brand .mark { width: 42px; height: 42px; border-radius: 13px; background: #264f3d; color: #fff; display: grid; place-items: center; }
+    .admin-brand h1 { font: 800 20px Manrope, sans-serif; margin: 0; }
+    .admin-brand p { margin: 3px 0 0; font-size: 11px; color: #8a8f85; }
+    .admin-tabs { display: flex; gap: 4px; background: #eceee7; padding: 4px; border-radius: 12px; flex-wrap: wrap; }
+    .admin-tabs button { border: 0; background: transparent; padding: 9px 13px; border-radius: 9px; font: 700 11px 'DM Sans'; color: #6b7167; cursor: pointer; }
+    .admin-tabs button.active { background: #fff; color: #264f3d; box-shadow: 0 1px 5px #0001; }
+    .admin-grid { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 16px; align-items: start; }
+    .admin-card { background: #fff; border: 1px solid #e7e9e2; border-radius: 16px; padding: 18px; }
+    .admin-card h2 { font: 700 15px Manrope, sans-serif; margin: 0 0 4px; }
+    .admin-card .sub { font-size: 11px; color: #8a8f85; margin: 0 0 14px; }
+    .admin-list { display: grid; gap: 9px; }
+    .admin-item { display: flex; gap: 11px; align-items: center; padding: 10px; border: 1px solid #eef0ea; border-radius: 12px; }
+    .admin-item img { width: 54px; height: 54px; border-radius: 9px; object-fit: cover; background: #eee; }
+    .admin-item .grow { flex: 1; min-width: 0; }
+    .admin-item b { display: block; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .admin-item small { display: block; color: #8a8f85; font-size: 10px; margin-top: 3px; }
+    .admin-item .price { font: 700 12px Manrope; color: #2f553d; }
+    .icon-btn { width: 31px; height: 31px; border: 1px solid #e3e6de; border-radius: 8px; background: #fff; display: grid; place-items: center; cursor: pointer; color: #6b7167; }
+    .icon-btn svg { width: 14px; }
+    .field { margin-bottom: 11px; }
+    .field label { display: block; font-size: 10px; font-weight: 700; color: #6f756b; margin-bottom: 5px; }
+    .field input, .field select, .field textarea { width: 100%; border: 1px solid #e1e4dc; border-radius: 9px; padding: 10px 11px; font: inherit; font-size: 12px; background: #fff; }
+    .field textarea { min-height: 72px; resize: vertical; }
+    .admin-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .stat-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+    .stat-box { background: #fff; border: 1px solid #e7e9e2; border-radius: 14px; padding: 14px; }
+    .stat-box span { font-size: 9px; letter-spacing: .12em; color: #8a8f85; font-weight: 700; }
+    .stat-box b { display: block; font: 800 22px Manrope; margin-top: 7px; }
+    .stat-box small { display: block; font-size: 10px; color: #8a8f85; margin-top: 4px; }
+    .table-wrap { overflow: auto; }
+    .data-table { width: 100%; border-collapse: collapse; }
+    .data-table th { text-align: left; font-size: 9px; letter-spacing: .1em; color: #8a8f85; padding: 9px 10px; border-bottom: 1px solid #eceee7; }
+    .data-table td { font-size: 11px; padding: 10px; border-bottom: 1px solid #f2f3ee; vertical-align: top; }
+    .pill { display: inline-block; padding: 4px 8px; border-radius: 999px; font-size: 9px; font-weight: 700; }
+    .pill.green { background: #e9f3e7; color: #3f7a4e; }
+    .pill.orange { background: #fbf0e2; color: #9b6a2f; }
+    .pill.gray { background: #f0f1ec; color: #73786f; }
+    .pill.red { background: #f8e9e6; color: #a25042; }
+    .toast { position: fixed; right: 20px; bottom: 20px; background: #223028; color: #fff; border-radius: 11px; padding: 12px 16px; font-size: 12px; opacity: 0; transform: translateY(8px); transition: .2s; pointer-events: none; z-index: 60; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .empty { color: #8a8f85; font-size: 12px; padding: 22px; text-align: center; }
+    @media (max-width: 900px) { .admin-grid { grid-template-columns: 1fr; } .stat-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  </style>
+</head>
+<body>
+  <div class="admin-shell">
+    <header class="admin-top">
+      <div class="admin-brand">
+        <span class="mark"><i data-lucide="utensils"></i></span>
+        <div><h1>Maison Cloud Admin</h1><p>Menu, orders and sync for the restaurant device</p></div>
+      </div>
+      <nav class="admin-tabs" id="adminTabs">
+        <button data-tab="dashboard" class="active">Overview</button>
+        <button data-tab="menu">Menu</button>
+        <button data-tab="orders">Orders</button>
+        <button data-tab="reports">Reports</button>
+        <button data-tab="sync">Sync & QR</button>
+        <button data-tab="settings">Settings</button>
+      </nav>
+    </header>
+    <main id="adminView"><div class="empty">Loading…</div></main>
+  </div>
+  <div class="toast" id="adminToast"></div>
+  <script src="/assets/js/reports.js"></script>
+  <script src="/assets/js/admin.js"></script>
+</body>
+</html>

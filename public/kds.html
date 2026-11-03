@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#1f2a20">
+  <title>Kitchen Display | Maison</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/premium.css">
+  <link rel="stylesheet" href="/assets/css/kds.css">
+</head>
+<body data-station="KITCHEN">
+  <div class="kds-shell">
+    <header class="kds-header">
+      <div class="kds-brand">
+        <span class="kds-mark">M</span>
+        <div>
+          <strong id="kdsTitle">Kitchen Display</strong>
+          <small id="kdsSubtitle">Live tickets from the POS</small>
+        </div>
+      </div>
+      <nav class="kds-switch">
+        <a href="/kitchen" data-station-link="KITCHEN">Kitchen</a>
+        <a href="/bar" data-station-link="BAR">Bar</a>
+      </nav>
+      <div class="kds-meta">
+        <span id="kdsClock">--:--</span>
+        <span class="kds-live"><i></i> Live</span>
+        <a class="kds-link" href="/erp">ERP</a>
+        <button class="kds-button" id="kdsRefresh" type="button">Refresh</button>
+      </div>
+    </header>
+    <main class="kds-board" id="kdsBoard">
+      <div class="kds-empty">Loading tickets...</div>
+    </main>
+    <div class="kds-toast" id="kdsToast"></div>
+  </div>
+  <script src="/assets/js/kds-node.js"></script>
+</body>
+</html>

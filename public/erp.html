@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f7f7f4">
+  <title>ERP | Maison</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/premium.css">
+  <link rel="stylesheet" href="/assets/css/erp.css">
+</head>
+<body>
+  <div class="prototype-note"><span class="note-dot"></span><span>LIVE NODE.JS ERP</span><span class="note-divider"></span>Orders, inventory, staff, purchasing, and licensing are connected</div>
+  <div class="app-shell erp-shell" id="appShell">
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="#dashboard" aria-label="Maison ERP">
+        <span class="brand-mark">M</span>
+        <span><strong>Maison</strong><small>RESTAURANT ERP</small></span>
+      </a>
+      <div class="venue-switch">
+        <span class="venue-icon">AD</span>
+        <span><b>Maison Addis</b><small>Bole main venue</small></span>
+      </div>
+      <nav class="nav-groups" id="navGroups"></nav>
+      <div class="sidebar-bottom">
+        <div class="service-card">
+          <span class="service-live"></span>
+          <span><b>ERP is online</b><small>Local and cloud database</small></span>
+        </div>
+        <div class="profile-row">
+          <span class="profile-avatar" id="profileInitials">--</span>
+          <span><b id="profileName">Loading</b><small id="profileRole">Signed in</small></span>
+          <button class="erp-logout" id="logoutButton" type="button">Log out</button>
+        </div>
+      </div>
+    </aside>
+    <div class="mobile-scrim" id="mobileScrim"></div>
+    <main class="main-shell">
+      <header class="topbar">
+        <button class="icon-button menu-toggle" id="menuToggle" aria-label="Open navigation">Menu</button>
+        <div class="crumb"><span>Maison Addis</span><b id="crumbLabel">Dashboard</b></div>
+        <div class="topbar-actions">
+          <div class="service-pill"><span class="service-live"></span> Live service</div>
+          <a class="icon-button" href="/" title="Open point of sale">POS</a>
+          <span class="top-divider"></span>
+          <a class="profile-compact" href="/license/activate">
+            <span class="profile-avatar" id="topInitials">--</span>
+            <span><b id="topName">Loading</b><small id="topRole">ERP user</small></span>
+          </a>
+        </div>
+      </header>
+      <div class="view" id="viewContent">
+        <div class="erp-empty">Loading ERP...</div>
+      </div>
+    </main>
+  </div>
+
+  <div class="modal-layer" id="modal">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h2 id="modalTitle">Details</h2>
+        <button class="icon-button quiet" type="button" id="modalClose" aria-label="Close">Close</button>
+      </div>
+      <div class="modal-content erp-modal-body" id="modalBody"></div>
+    </div>
+  </div>
+  <div class="toast" id="toast">Saved</div>
+  <script src="/assets/js/erp.js"></script>
+</body>
+</html>

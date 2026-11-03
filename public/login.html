@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f7f7f4">
+  <title>Sign in | Maison ERP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/premium.css">
+  <link rel="stylesheet" href="/assets/css/erp.css">
+</head>
+<body class="auth-page">
+  <main class="auth-card">
+    <div class="auth-brand">
+      <span class="brand-mark">M</span>
+      <span>
+        <strong>Maison ERP</strong>
+        <small>RESTAURANT OPERATIONS</small>
+      </span>
+    </div>
+    <h1>Welcome back</h1>
+    <p class="lead">Sign in to manage orders, inventory, staff, and your restaurant license.</p>
+    <div class="auth-error" id="authError"></div>
+    <form class="erp-form" id="loginForm">
+      <div class="field">
+        <label class="form-label" for="email">Email address</label>
+        <input class="form-control" id="email" name="email" type="email" autocomplete="username" placeholder="owner@genius.et" required>
+      </div>
+      <div class="field">
+        <label class="form-label" for="password">Password</label>
+        <input class="form-control" id="password" name="password" type="password" autocomplete="current-password" placeholder="Your password" required>
+      </div>
+      <button class="btn btn-primary btn-block" type="submit" id="loginButton">Sign in</button>
+    </form>
+    <div class="auth-links">
+      <a href="/license/activate">License activation</a>
+      <a href="/">Open point of sale</a>
+    </div>
+    <div class="auth-hint">
+      Demo owner: <strong>owner@genius.et</strong> / <strong>Admin@12345</strong><br>
+      Other seeded roles use the same password pattern, for example manager@genius.et / Manager@12345.
+    </div>
+  </main>
+  <script src="/assets/js/login.js"></script>
+</body>
+</html>

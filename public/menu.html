@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#1f2a20">
+  <title>Menu · Maison Addis</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root { --ink: #1f2a20; --muted: #7c8178; --line: #e7e9e2; --paper: #f7f7f4; --green: #264f3d; --gold: #b88a4a; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--paper); color: var(--ink); font-family: 'DM Sans', system-ui, sans-serif; }
+    .menu-shell { max-width: 1080px; margin: 0 auto; padding: 28px 20px 60px; }
+    .menu-hero { background: linear-gradient(135deg, #1f2a20, #2f4a38); color: #f7f5ee; border-radius: 24px; padding: 38px 34px; position: relative; overflow: hidden; }
+    .menu-hero::after { content: ''; position: absolute; width: 260px; height: 260px; border-radius: 50%; background: #ffffff12; right: -60px; top: -80px; }
+    .eyebrow { font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: #c9d3c6; font-weight: 700; }
+    .menu-hero h1 { font: 800 clamp(30px, 5vw, 48px) Manrope, sans-serif; margin: 10px 0 8px; letter-spacing: -.03em; }
+    .menu-hero p { color: #c9d3c6; font-size: 14px; margin: 0; max-width: 540px; line-height: 1.6; }
+    .table-badge { display: inline-flex; align-items: center; gap: 8px; margin-top: 18px; background: #ffffff14; border: 1px solid #ffffff22; padding: 9px 13px; border-radius: 999px; font-size: 12px; color: #f4f6ef; }
+    .menu-tools { display: flex; gap: 10px; align-items: center; margin: 22px 0 10px; flex-wrap: wrap; }
+    .menu-search { flex: 1; min-width: 220px; display: flex; align-items: center; gap: 8px; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 0 13px; height: 44px; }
+    .menu-search input { border: 0; outline: 0; flex: 1; font: inherit; font-size: 13px; background: transparent; }
+    .menu-cats { display: flex; gap: 7px; overflow: auto; padding: 6px 0 16px; scrollbar-width: none; }
+    .menu-cats::-webkit-scrollbar { display: none; }
+    .menu-chip { border: 1px solid var(--line); background: #fff; color: #61675d; border-radius: 999px; padding: 9px 15px; font-size: 12px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+    .menu-chip.active { background: var(--green); color: #fff; border-color: var(--green); }
+    .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; }
+    .menu-card { background: #fff; border: 1px solid var(--line); border-radius: 18px; overflow: hidden; display: flex; flex-direction: column; }
+    .menu-card img { width: 100%; height: 168px; object-fit: cover; background: #eeeee8; }
+    .menu-card-body { padding: 15px 16px 17px; display: flex; flex-direction: column; gap: 7px; flex: 1; }
+    .menu-card-top { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+    .menu-card h3 { font: 700 15px Manrope, sans-serif; margin: 0; line-height: 1.35; }
+    .menu-card .price { font: 800 14px Manrope, sans-serif; color: #2f553d; white-space: nowrap; }
+    .menu-card .desc { color: var(--muted); font-size: 12px; line-height: 1.55; margin: 0; flex: 1; }
+    .menu-card .meta { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 3px; }
+    .tag { font-size: 10px; font-weight: 700; color: #6b7267; background: #f1f3ed; border-radius: 999px; padding: 5px 9px; }
+    .tag.featured { background: #f6eddf; color: #8a642f; }
+    .empty, .error { background: #fff; border: 1px dashed #d8dbd2; border-radius: 18px; padding: 46px 20px; text-align: center; color: var(--muted); }
+    .error h2 { color: #8f4338; margin: 0 0 8px; font-family: Manrope, sans-serif; }
+    .footer { text-align: center; color: #93988e; font-size: 11px; margin-top: 34px; line-height: 1.7; }
+    @media (max-width: 560px) { .menu-shell { padding: 14px 12px 40px; } .menu-hero { padding: 28px 22px; border-radius: 18px; } .menu-grid { grid-template-columns: 1fr; } .menu-card img { height: 190px; } }
+  </style>
+</head>
+<body>
+  <main class="menu-shell">
+    <section class="menu-hero">
+      <div class="eyebrow">MAISON ADDIS · BOLE</div>
+      <h1 id="restaurantName">Today's menu</h1>
+      <p id="restaurantNote">Freshly prepared dishes and drinks, updated live from the restaurant.</p>
+      <div class="table-badge" id="tableBadge" style="display:none"></div>
+    </section>
+    <div class="menu-tools">
+      <label class="menu-search"><span>⌕</span><input id="menuSearch" placeholder="Search the menu…" autocomplete="off"></label>
+      <span id="menuCount" style="font-size:12px;color:#7c8178"></span>
+    </div>
+    <div class="menu-cats" id="menuCats"></div>
+    <div id="menuOutput"><div class="empty">Loading the menu…</div></div>
+    <div class="footer" id="menuFooter">Thank you for dining with us.</div>
+  </main>
+  <script src="/assets/js/public-menu.js"></script>
+</body>
+</html>

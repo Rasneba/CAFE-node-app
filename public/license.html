@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f7f7f4">
+  <title>License | Maison ERP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/premium.css">
+  <link rel="stylesheet" href="/assets/css/erp.css">
+  <style>
+    .license-page { max-width: 980px; margin: 0 auto; padding: 34px 22px 60px; }
+    .license-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin-bottom: 20px; }
+    .license-head h1 { font: 700 27px Manrope, sans-serif; letter-spacing: -.045em; margin: 0; }
+    .license-head p { color: var(--muted); font-size: 11px; margin: 7px 0 0; }
+    .license-status { display: flex; align-items: center; gap: 12px; padding: 16px 17px; border-bottom: 1px solid var(--line); }
+    .license-status .badge { width: 42px; height: 42px; border-radius: 13px; display: grid; place-items: center; background: var(--red-soft); color: #ad5147; font: 800 14px Manrope, sans-serif; }
+    .license-status.active .badge { background: var(--green-soft); color: var(--green); }
+    .license-status b { display: block; font-size: 12px; }
+    .license-status small { display: block; color: var(--muted); font-size: 10px; margin-top: 4px; }
+    .license-meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 15px 17px; }
+    .license-meta div { background: #f8f9f5; border-radius: 9px; padding: 9px 10px; }
+    .license-meta span { display: block; color: var(--muted); font-size: 8px; text-transform: uppercase; letter-spacing: .07em; }
+    .license-meta b { display: block; font-size: 10px; margin-top: 5px; word-break: break-word; }
+    .license-result { display: none; margin-top: 12px; }
+    .license-result.show { display: block; }
+    .license-result .erp-license-key { margin-top: 8px; }
+    @media (max-width: 720px) { .license-head { flex-direction: column; align-items: flex-start; } .license-meta { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main class="license-page">
+    <div class="license-head">
+      <div>
+        <div class="eyebrow">MAISON ERP</div>
+        <h1>License activation</h1>
+        <p>Activate this installation or issue a signed key for this machine.</p>
+      </div>
+      <div class="erp-actions">
+        <a class="btn btn-outline" href="/">Point of sale</a>
+        <a class="btn btn-outline" href="/erp">ERP dashboard</a>
+      </div>
+    </div>
+
+    <div class="erp-grid-2">
+      <div class="erp-stack">
+        <section class="erp-card">
+          <div class="erp-card-head">
+            <div><h2>Current license</h2><small id="licenseSub">Checking installation...</small></div>
+            <span class="erp-tag" id="licenseTag">Checking</span>
+          </div>
+          <div class="license-status" id="licenseStatus">
+            <span class="badge">!</span>
+            <div><b id="licenseTitle">Checking license</b><small id="licenseReason">Please wait.</small></div>
+          </div>
+          <div class="license-meta">
+            <div><span>Machine ID</span><b id="machineId">-</b></div>
+            <div><span>Issued to</span><b id="issuedTo">-</b></div>
+            <div><span>Issued at</span><b id="issuedAt">-</b></div>
+            <div><span>Expires at</span><b id="expiresAt">-</b></div>
+          </div>
+        </section>
+
+        <section class="erp-card">
+          <div class="erp-card-head">
+            <div><h2>Activate a license key</h2><small>Paste the signed key issued for this machine.</small></div>
+          </div>
+          <div class="erp-card-body">
+            <form class="erp-form" id="activateForm">
+              <div class="field">
+                <label class="form-label" for="licenseKey">License key</label>
+                <textarea class="form-control" id="licenseKey" name="key" placeholder="SKYBLUE_LICENSE_V1..." required></textarea>
+              </div>
+              <button class="btn btn-primary" type="submit" id="activateButton">Activate license</button>
+              <div class="field-hint" id="activateHint">You must be signed in with settings permission to activate.</div>
+            </form>
+            <div class="license-result" id="activateResult"></div>
+          </div>
+        </section>
+      </div>
+
+      <div class="erp-stack">
+        <section class="erp-card">
+          <div class="erp-card-head">
+            <div><h2>Issue a license</h2><small>Generate a key bound to this installation.</small></div>
+          </div>
+          <div class="erp-card-body">
+            <div id="issueLocked" class="erp-empty">Sign in with an owner or manager account to issue a license.</div>
+            <form class="erp-form" id="issueForm" style="display:none">
+              <div class="field">
+                <label class="form-label" for="client">Client name</label>
+                <input class="form-control" id="client" name="client" placeholder="Maison Addis" required>
+              </div>
+              <div class="field">
+                <label class="form-label" for="tin">TIN</label>
+                <input class="form-control" id="tin" name="tin" placeholder="Optional tax number">
+              </div>
+              <div class="field">
+                <label class="form-label" for="ttlDays">Validity in days</label>
+                <input class="form-control" id="ttlDays" name="ttlDays" type="number" min="1" value="365" required>
+              </div>
+              <button class="btn btn-dark" type="submit" id="issueButton">Generate license key</button>
+            </form>
+            <div class="license-result" id="issueResult"></div>
+          </div>
+        </section>
+
+        <section class="erp-card">
+          <div class="erp-card-head"><div><h2>Need access?</h2><small>License activation requires an authenticated manager.</small></div></div>
+          <div class="erp-card-body">
+            <div class="erp-list">
+              <div class="erp-list-row"><div class="main"><b>Sign in</b><small>Use the seeded owner or manager account.</small></div><a class="btn btn-small btn-outline" href="/login?next=/license/activate">Sign in</a></div>
+              <div class="erp-list-row"><div class="main"><b>ERP dashboard</b><small>Manage orders, inventory, staff, and settings.</small></div><a class="btn btn-small btn-soft" href="/erp">Open ERP</a></div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+  <div class="toast" id="toast">License updated</div>
+  <script src="/assets/js/license.js"></script>
+</body>
+</html>
